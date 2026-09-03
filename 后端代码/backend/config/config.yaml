@@ -1,0 +1,67 @@
+# =========================================================
+# NewsCraft 全局配置
+# 敏感信息一律用 ${ENV_NAME} 引用环境变量，不写死明文
+# =========================================================
+
+app:
+  name: "NewsCraft"
+  env: "dev"                  # dev / test / prod
+  debug: true
+  host: "0.0.0.0"
+  port: 8000
+
+# --- 数据库 ---
+database:
+  host: "localhost"
+  port: 3306
+  user: "root"
+  password: "${MYSQL_PASSWORD}"   # 环境变量，避免硬编码
+  name: "newscraft_app"                # 对应 scripts/database.sql 的库名
+  charset: "utf8mb4"
+
+# --- Redis 缓存（对应原 cache_config.py）---
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: "${REDIS_PASSWORD}"
+
+# --- 用户 Token 认证（原项目 7 天过期）---
+auth:
+  token_expire_days: 7
+  secret_key: "${SECRET_KEY}"     # 建议用 uuid 随机串
+
+# --- 大模型客户端（对应 core/llm_client/ 预留目录）---
+llm:
+  provider: "dashscope"       # dashscope(通义千问) / openai / ollama(本地)
+  api_key: "${DASHSCOPE_API_KEY}"   # 后端代理调用，Key 不再放前端
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  chat_model: "qwen-plus"
+  timeout: 60                  # 秒
+  max_retries: 3               # 超时/限流重试
+
+# --- Embedding 模型 ---
+embedding:
+  provider: "dashscope"
+  model: "text-embedding-v3"
+  dimensions: 1024
+
+# --- 向量库（对应 core/rag_core/ 预留目录）---
+vector_db:
+  type: "in_memory"           # 阶段一用内存/本地文件，后期可换 Milvus
+  collection: "news_vectors"
+  top_k: 5
+
+# --- RAG 问答参数 ---
+rag:
+  chunk_size: 500             # 正文切片长度
+  chunk_overlap: 50           # 切片重叠
+  recall_top_k: 5             # 召回数量
+  max_context_len: 3000       # 塞给 LLM 的上下文上限
+  enable_question_rewrite: true   # 问题重写（简历加分项）
+  enable_context_dedup: true      # 召回去重
+  enable_citation: true           # 引用溯源
+
+# --- 异步任务（对应 tasks/async_ai_task.py）---
+tasks:
+  concurrency: 4

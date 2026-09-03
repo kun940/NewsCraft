@@ -1,0 +1,9 @@
+
+fastapi>=0.115
+uvicorn[standard]
+sqlalchemy>=2.0,<2.1
+aiomysql
+redis>=4.2
+passlib[bcrypt]
+pydantic>=2
+python-multipart

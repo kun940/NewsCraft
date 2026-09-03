@@ -1,0 +1,29 @@
+# 虚拟环境
+.venv/
+venv/
+
+# Python编译缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE PyCharm
+.idea/
+*.iml
+
+# uv 本地缓存
+.uv/
+
+# 日志、临时文件
+*.log
+*.tmp
+.DS_Store
+
+# 如果你真的想忽略docs、scripts目录，去掉./
+docs/
+scripts/
+# environment files (secrets)
+.env
+.env.*
+!.env.example
