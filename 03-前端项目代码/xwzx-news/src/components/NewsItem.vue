@@ -10,13 +10,22 @@
       </div>
     </div>
     <div class="news-image">
-      <img :src="news.image" :alt="news.title">
+      <img
+        v-if="showImage"
+        :src="news.image"
+        :alt="news.title"
+        loading="lazy"
+        @error="onImageError"
+      >
+      <div v-else class="news-image-placeholder">
+        <van-icon name="photo-o" size="26" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { computed, defineProps, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -27,6 +36,19 @@ const props = defineProps({
 })
 
 const router = useRouter()
+
+// 图片加载失败标记（image 为空 / 加载失败时显示占位块）
+const imgError = ref(false)
+const showImage = computed(() => !!props.news.image && !imgError.value)
+
+const onImageError = () => {
+  imgError.value = true
+}
+
+// 列表复用组件时，切换新闻后重置失败标记
+watch(() => props.news.image, () => {
+  imgError.value = false
+})
 
 const goToDetail = () => {
   router.push(`/news/detail/${props.news.id}`)
@@ -92,5 +114,17 @@ const goToDetail = () => {
   height: 100%;
   object-fit: cover;
   border-radius: 4px;
+}
+
+/* image 为空或加载失败时的占位块（与图片同尺寸，保持列表布局稳定） */
+.news-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f2f3f5;
+  border-radius: 4px;
+  color: #c8c9cc;
 }
 </style>

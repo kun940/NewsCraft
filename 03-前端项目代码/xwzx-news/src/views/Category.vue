@@ -31,6 +31,9 @@ import { useI18n } from 'vue-i18n'
 import TabBar from '../components/TabBar.vue'
 import { computed } from 'vue'
 
+// 显式组件名：keep-alive 按 name 缓存本页
+defineOptions({ name: 'Category' })
+
 const newsStore = useNewsStore()
 const router = useRouter()
 const { t } = useI18n()

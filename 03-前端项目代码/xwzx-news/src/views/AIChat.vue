@@ -1,8 +1,21 @@
 <template>
   <div class="ai-chat-container">
-    <van-nav-bar title="AI问答" fixed />
+    <van-nav-bar :title="$t('aiChat.title')" fixed>
+      <template #right>
+        <div class="nav-right" @click="goHistory">
+          <van-icon name="records" size="18" />
+          <span>{{ $t('aiChat.history') }}</span>
+        </div>
+      </template>
+    </van-nav-bar>
     
     <div class="chat-content">
+      <!-- 未登录提示条 -->
+      <div v-if="!isLogin" class="login-tip">
+        {{ $t('aiChat.loginTip') }}
+        <span class="login-tip-link" @click="goLogin">{{ $t('common.login') }}</span>
+      </div>
+
       <div class="messages-container" ref="messagesContainer">
         <div 
           v-for="(message, index) in messages" 
@@ -16,6 +29,8 @@
               <span></span>
             </div>
             <div v-else v-html="formatMessage(message.content)"></div>
+            <!-- 引用溯源 -->
+            <source-card v-if="message.role === 'assistant' && message.sources && message.sources.length" :sources="message.sources" />
           </div>
         </div>
       </div>
@@ -26,7 +41,7 @@
           rows="1"
           autosize
           type="textarea"
-          placeholder="请输入问题..."
+          :placeholder="$t('aiChat.placeholder')"
           class="chat-input"
           @keypress.enter.prevent="sendMessage"
         />
@@ -36,7 +51,7 @@
           :disabled="isLoading || !userInput.trim()" 
           @click="sendMessage"
         >
-          发送
+          {{ $t('aiChat.send') }}
         </van-button>
       </div>
     </div>
@@ -46,143 +61,136 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
-import TabBar from '../components/TabBar.vue';
+import { ref, onMounted, nextTick, watch, computed, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { showToast } from 'vant';
+
+// 显式组件名：keep-alive 按 name 缓存本页
+defineOptions({ name: 'AIChat' });
 import * as marked from 'marked';
 import DOMPurify from 'dompurify';
-import { aiChatConfig } from '../config/api';
+import TabBar from '../components/TabBar.vue';
+import SourceCard from '../components/SourceCard.vue';
+import { chatRAG } from '../api/ai';
+import { getToken } from '../api/request';
+import { useUserStore } from '../store/user';
 
-// 聊天消息
+const router = useRouter();
+const { t } = useI18n();
+const userStore = useUserStore();
+const isLogin = computed(() => userStore.getLoginStatus);
+
+// 聊天消息（assistant 消息可携带 sources 引用溯源）
 const messages = ref([
-  { role: 'assistant', content: '你好！我是AI助手，有什么可以帮助你的吗？' }
+  { role: 'assistant', content: '', sources: [] }
 ]);
 const userInput = ref('');
 const messagesContainer = ref(null);
 const isLoading = ref(false);
+let abortController = null;
 
-// 从配置文件获取API设置
-const apiEndpoint = ref(aiChatConfig.apiEndpoint);
-const apiKey = ref(aiChatConfig.apiKey);
-const model = ref(aiChatConfig.model);
+onMounted(async () => {
+  // 有 token 时刷新登录态，保证会话持久化与个性化可用
+  if (getToken() && !userStore.getLoginStatus) {
+    await userStore.getUserInfoDetail();
+  }
+  if (!messages.value[0].content) {
+    messages.value[0] = {
+      role: 'assistant',
+      content: t('aiChat.welcome'),
+      sources: []
+    };
+  }
+  scrollToBottom();
+});
+
+onBeforeUnmount(() => {
+  if (abortController) {
+    abortController.abort();
+  }
+});
 
 // 格式化消息内容（支持Markdown）
 const formatMessage = (content) => {
   if (!content) return '';
-  // 使用marked解析Markdown，并用DOMPurify清理HTML
   return DOMPurify.sanitize(marked.parse(content));
 };
 
 // 发送消息
 const sendMessage = async () => {
   if (!userInput.value.trim() || isLoading.value) return;
-  
-  // 检查API设置
-  if (!apiKey.value || apiKey.value === 'your-api-key-here') {
-    showToast('API Key未配置，请联系管理员');
+
+  // 未登录：引导登录（问答历史与个性化依赖用户身份）
+  if (!isLogin.value) {
+    showToast(t('aiChat.loginTip'));
+    goLogin();
     return;
   }
-  
+
   // 添加用户消息
   const userMessage = userInput.value.trim();
   messages.value.push({ role: 'user', content: userMessage });
   userInput.value = '';
-  
+
   // 添加AI消息占位
-  messages.value.push({ role: 'assistant', content: '' });
-  
-  // 滚动到底部
+  messages.value.push({ role: 'assistant', content: '', sources: [] });
+
   await nextTick();
   scrollToBottom();
-  
-  // 发送请求
+
+  // 发送请求（后端 RAG，SSE 流式）
   isLoading.value = true;
+  abortController = new AbortController();
   try {
-    await fetchAIResponse(userMessage);
+    await chatRAG({
+      question: userMessage,
+      signal: abortController.signal,
+      onEvent: handleChatEvent,
+    });
   } catch (error) {
-    console.error('Error fetching AI response:', error);
-    // 更新最后一条消息为错误信息
-    messages.value[messages.value.length - 1].content = `发生错误: ${error.message || '请检查网络连接和API设置'}`;
+    console.error('AI 问答请求失败:', error);
+    const last = messages.value[messages.value.length - 1];
+    if (error && error.code === 401) {
+      // 已由 request 层跳转登录，这里兜底提示
+      last.content = t('aiChat.needLogin');
+    } else if (error && error.code === 503) {
+      last.content = t('aiChat.serviceUnavailable');
+    } else if (error && error.name === 'AbortError') {
+      last.content = t('aiChat.cancelled');
+    } else {
+      last.content = `${t('aiChat.error')}: ${error?.message || ''}`;
+    }
+    last.sources = last.sources || [];
   } finally {
     isLoading.value = false;
+    abortController = null;
     await nextTick();
     scrollToBottom();
   }
 };
 
-// 获取AI响应（使用SSE）
-const fetchAIResponse = async (userMessage) => {
-  const allMessages = messages.value
-    .slice(0, -1) // 排除最后一个空的assistant消息
-    .map(msg => ({ role: msg.role, content: msg.content }));
-  
-  try {
-    const response = await fetch(apiEndpoint.value, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey.value}`,
-        'X-DashScope-SSE': 'enable' // 添加阿里云DashScope所需的SSE头
-      },
-      body: JSON.stringify({
-        model: model.value,
-        messages: allMessages,
-        stream: true
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error?.message || `HTTP error! status: ${response.status}`);
+// 处理后端 SSE 事件
+const handleChatEvent = (event, data) => {
+  const last = messages.value[messages.value.length - 1];
+  if (!last) return;
+
+  if (event === 'delta') {
+    last.content += data?.content || '';
+  } else if (event === 'sources') {
+    last.sources = data?.sources || [];
+  } else if (event === 'done') {
+    // done 携带完整回答：仅在增量为空时使用，避免重复
+    if (!last.content && data?.answer) {
+      last.content = data.answer;
     }
-    
-    // 处理SSE流
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let aiResponse = '';
-  
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6);
-        if (data === '[DONE]') continue;
-        
-        try {
-          const json = JSON.parse(data);
-          // 适配阿里云DashScope的返回格式
-          const content = json.choices?.[0]?.delta?.content || 
-                         json.output?.text || 
-                         json.choices?.[0]?.message?.content || '';
-          if (content) {
-            aiResponse += content;
-            // 更新最后一条消息
-            messages.value[messages.value.length - 1].content = aiResponse;
-            await nextTick();
-            scrollToBottom();
-          }
-        } catch (e) {
-          console.error('Error parsing SSE data:', e);
-        }
-      }
+    if (data?.sources) {
+      last.sources = data.sources;
     }
+  } else if (event === 'error') {
+    last.content = data?.message || t('aiChat.serviceUnavailable');
   }
-  
-  // 如果没有收到任何内容
-  if (!aiResponse) {
-    messages.value[messages.value.length - 1].content = '抱歉，我无法生成回复。请检查API设置或稍后再试。';
-  }
-  } catch (error) {
-    console.error('Fetch error:', error);
-    throw error;
-  }
+  scrollToBottom();
 };
 
 // 滚动到底部
@@ -197,10 +205,20 @@ watch(messages, () => {
   nextTick(scrollToBottom);
 }, { deep: true });
 
-// 组件挂载时滚动到底部
-onMounted(() => {
-  scrollToBottom();
-});
+// 跳转问答历史
+const goHistory = () => {
+  if (!isLogin.value) {
+    showToast(t('aiChat.loginTip'));
+    goLogin();
+    return;
+  }
+  router.push('/ai/history');
+};
+
+// 跳转登录
+const goLogin = () => {
+  router.push('/login');
+};
 </script>
 
 <style scoped>
@@ -218,6 +236,29 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  color: #1989fa;
+}
+
+.login-tip {
+  background-color: #fff7e6;
+  color: #d46b08;
+  font-size: 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.login-tip-link {
+  color: #1989fa;
+  font-weight: 600;
 }
 
 .messages-container {
@@ -322,7 +363,6 @@ onMounted(() => {
   }
 }
 
-/* Markdown样式 */
 :deep(pre) {
   background-color: #f0f0f0;
   padding: 10px;

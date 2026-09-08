@@ -25,6 +25,27 @@
         <span>{{ newsStore.newsDetail.views }} 阅读</span>
       </div>
       
+      <!-- AI 内容增强（可选字段：旧后端/未加工新闻缺失时自动隐藏） -->
+      <div
+        v-if="newsStore.newsDetail.aiSummary || newsStore.newsDetail.aiTags || newsStore.newsDetail.contentKeywords"
+        class="ai-content"
+      >
+        <div v-if="newsStore.newsDetail.aiSummary" class="ai-summary-card">
+          <div class="ai-summary-title">
+            <van-icon name="bulb-o" /> {{ $t('newsDetail.aiSummary') }}
+          </div>
+          <div class="ai-summary-text">{{ newsStore.newsDetail.aiSummary }}</div>
+        </div>
+        <div v-if="newsStore.newsDetail.aiTags" class="ai-tags-row">
+          <span class="ai-label">{{ $t('newsDetail.aiTags') }}</span>
+          <ai-tags :tags="newsStore.newsDetail.aiTags" />
+        </div>
+        <div v-if="newsStore.newsDetail.contentKeywords" class="ai-tags-row">
+          <span class="ai-label">{{ $t('newsDetail.keywords') }}</span>
+          <ai-tags :tags="newsStore.newsDetail.contentKeywords" />
+        </div>
+      </div>
+      
       <div class="cover" v-if="newsStore.newsDetail.image">
         <img :src="newsStore.newsDetail.image" :alt="newsStore.newsDetail.title">
       </div>
@@ -45,7 +66,15 @@
             @click="goToRelatedNews(item.id)"
           >
             <div class="related-image">
-              <img :src="item.image" :alt="item.title">
+              <img
+                v-if="item.image"
+                :src="item.image"
+                :alt="item.title"
+                @error="$event.target.style.display = 'none'"
+              >
+              <div v-else class="related-image-placeholder">
+                <van-icon name="photo-o" size="18" />
+              </div>
             </div>
             <div class="related-title">{{ item.title }}</div>
           </div>
@@ -65,6 +94,7 @@ import { useHistoryStore } from '../store/modules/history'
 import { useFavoriteStore } from '../store/modules/favorite'
 import { useUserStore } from '../store/user'
 import { showToast } from 'vant'
+import AITags from '../components/AITags.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -220,6 +250,49 @@ onMounted(async () => {
   margin-right: 12px;
 }
 
+/* AI 内容增强 */
+.ai-content {
+  margin-bottom: 16px;
+}
+
+.ai-summary-card {
+  background-color: #f0f7ff;
+  border: 0.5px solid rgba(25, 137, 250, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.ai-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1989fa;
+  margin-bottom: 6px;
+}
+
+.ai-summary-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #444;
+}
+
+.ai-tags-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ai-label {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #999;
+  line-height: 2;
+}
+
 .cover {
   margin-bottom: 16px;
 }
@@ -274,6 +347,18 @@ onMounted(async () => {
   height: 100%;
   object-fit: cover;
   border-radius: 4px;
+}
+
+/* 相关推荐图片为空时的占位块（与图片同尺寸） */
+.related-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f2f3f5;
+  border-radius: 4px;
+  color: #c8c9cc;
 }
 
 .related-title {

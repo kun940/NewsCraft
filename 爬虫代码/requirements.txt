@@ -1,0 +1,7 @@
+# NewsCraft 爬虫依赖（与后端 requirements.txt 的 SQLAlchemy 版本约束保持一致）
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.1.0
+SQLAlchemy>=2.0,<2.1
+PyMySQL>=1.1.0
+python-dotenv>=1.0.0

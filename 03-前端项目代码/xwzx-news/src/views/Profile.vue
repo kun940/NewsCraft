@@ -27,6 +27,15 @@
         <van-cell title="个人简介" :value="userBio || '暂无简介'" is-link @click="showBioDialog" />
       </van-cell-group>
       
+      <!-- 兴趣标签（AI 画像，可选字段，缺失时隐藏） -->
+      <van-cell-group inset v-if="interestTagList.length" class="interest-group">
+        <template #title>{{ $t('profile.interestTags') }}</template>
+        <div class="interest-tags">
+          <span v-for="tag in interestTagList" :key="tag" class="interest-tag">{{ tag }}</span>
+        </div>
+        <div class="interest-desc">{{ $t('profile.interestDesc') }}</div>
+      </van-cell-group>
+      
       <van-cell-group inset class="security-group">
         <van-cell title="修改密码" is-link @click="showPasswordConfirm" />
       </van-cell-group>
@@ -39,8 +48,6 @@ import { ref, computed, h, onMounted } from 'vue';
 import { useUserStore } from '../store/user';
 import { showDialog, showToast, showLoadingToast, showSuccessToast, showFailToast } from 'vant';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
-import { apiConfig } from '../config/api';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -89,6 +96,13 @@ onMounted(async () => {
 const userInfo = computed(() => userStore.userInfo);
 const userId = computed(() => userStore.token ? userStore.token.substring(0, 5) : '');
 const userBio = computed(() => userStore.userInfo?.bio || '暂无简介');
+
+// 兴趣标签（逗号分隔 → 数组，兼容旧后端无字段）
+const interestTagList = computed(() => {
+  const tags = userStore.userInfo?.userInterestTags;
+  if (!tags) return [];
+  return tags.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
+});
 
 const showPasswordConfirm = () => {
   // 使用ref创建响应式变量
@@ -241,8 +255,32 @@ const showBioDialog = () => {
 
 .avatar-group,
 .info-group,
-.security-group {
+.security-group,
+.interest-group {
   margin-top: 12px;
+}
+
+.interest-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 6px;
+}
+
+.interest-tag {
+  font-size: 12px;
+  color: #1989fa;
+  background-color: rgba(25, 137, 250, 0.08);
+  border: 0.5px solid rgba(25, 137, 250, 0.25);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.interest-desc {
+  font-size: 12px;
+  color: #999;
+  padding: 0 16px 12px;
+  line-height: 1.6;
 }
 
 .password-dialog .van-dialog__content {

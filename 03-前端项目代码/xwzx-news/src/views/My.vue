@@ -34,8 +34,17 @@
       </div>
     </div>
 
+    <!-- 兴趣标签（仅登录且有画像时展示） -->
+    <div v-if="isLogin && interestTagList.length" class="interest-tags">
+      <div class="interest-tags-title">{{ $t('my.myInterest') }}</div>
+      <div class="interest-tags-body">
+        <span v-for="tag in interestTagList" :key="tag" class="interest-tag">{{ tag }}</span>
+      </div>
+    </div>
+
     <div class="menu-list">
       <van-cell-group inset>
+        <van-cell v-if="isLogin" :title="$t('my.myInterest')" is-link @click="goToAIRecommend" />
         <van-cell :title="$t('my.myFavorite')" is-link @click="goToFavorite" />
         <van-cell :title="$t('my.browsingHistory')" is-link @click="goToHistory" />
         <van-cell :title="$t('my.notifications')" is-link />
@@ -52,6 +61,9 @@ import { onMounted } from 'vue';
 import { useUserStore } from '../store/user';
 import { useRouter } from 'vue-router';
 import { computed, ref } from 'vue';
+
+// 显式组件名：keep-alive 按 name 缓存本页
+defineOptions({ name: 'My' });
 import { showDialog, showToast } from 'vant';
 import TabBar from '../components/TabBar.vue';
 import { useI18n } from 'vue-i18n';
@@ -64,6 +76,18 @@ const { t } = useI18n();
 const userInfo = computed(() => userStore.userInfo);
 const isLogin = computed(() => userStore.getLoginStatus);
 const userBio = computed(() => userStore.getUserBio || t('profile.bio'));
+
+// 兴趣标签（逗号分隔 → 数组，兼容旧后端无字段）
+const interestTagList = computed(() => {
+  const tags = userStore.userInfo?.userInterestTags;
+  if (!tags) return [];
+  return tags.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
+});
+
+// 跳转到 AI 推荐页
+const goToAIRecommend = () => {
+  router.push('/home?mode=ai');
+};
 
 // 跳转到登录页
 const goToLogin = () => {
@@ -187,5 +211,34 @@ onMounted(async () => {
 
 .menu-list {
   margin: 0 16px;
+}
+
+.interest-tags {
+  margin: 0 16px 8px;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.interest-tags-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.interest-tags-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.interest-tag {
+  font-size: 12px;
+  color: #1989fa;
+  background-color: rgba(25, 137, 250, 0.08);
+  border: 0.5px solid rgba(25, 137, 250, 0.25);
+  border-radius: 4px;
+  padding: 2px 8px;
 }
 </style>
