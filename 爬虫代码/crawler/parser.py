@@ -105,7 +105,8 @@ def parse_detail(html_text: str) -> Optional[NewsDetail]:
     title = h1.get_text(strip=True)
 
     paragraphs = [p.get_text(strip=True) for p in body_div.find_all("p")]
-    content = "\n".join(p for p in paragraphs if p)
+    # 段落间用双换行分隔（前端按 \n+ 分段渲染）
+    content = "\n\n".join(p for p in paragraphs if p)
 
     publish_time = _extract_publish_time(soup)
     author = _extract_author(soup)

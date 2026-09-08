@@ -153,14 +153,9 @@ export const useUserStore = defineStore('user', {
     }
   },
   
-  // 添加持久化配置
+  // 添加持久化配置（v4 格式：key 默认 store id，需显式指定为 user-store 与 getToken() 对齐）
   persist: {
-    enabled: true,
-    strategies: [
-      {
-        key: 'user-store',
-        storage: localStorage
-      }
-    ]
+    key: 'user-store',
+    storage: localStorage
   }
 });

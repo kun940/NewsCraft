@@ -53,7 +53,7 @@ def parse_detail(html: str) -> Optional[dict]:
             text = p.get_text(strip=True)
             if text and not text.startswith(_TAIL_PREFIXES):
                 paras.append(text)
-    content = "\n".join(paras)
+    content = "\n\n".join(paras)
 
     if not title or not content:
         return None

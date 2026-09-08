@@ -76,11 +76,13 @@ service.interceptors.response.use(
   (err) => {
     const status = err.response?.status
     const body = err.response?.data
-    if (status === 401) {
+    // 登录接口的 401 表示"用户名或密码错误"，不应触发登出清理
+    if (status === 401 && !err.config?.url?.includes('/login')) {
       handleUnauthorized()
     }
     const code = body?.code ?? status ?? 0
-    const message = body?.message || err.message || '网络请求失败'
+    // FastAPI 错误体为 { detail: "..." }，此处兜底读取
+    const message = body?.message || body?.detail || err.message || '网络请求失败'
     return Promise.reject(new ApiError(code, message))
   }
 )

@@ -106,10 +106,13 @@ const userStore = useUserStore()
 // 获取路由参数中的新闻ID
 const newsId = computed(() => Number(route.params.id))
 
-// 将内容拆分为段落
+// 将内容拆分为段落（兼容单/双换行与 CRLF：爬虫旧数据为单 \n，新数据为 \n\n）
 const contentParagraphs = computed(() => {
   if (!newsStore.newsDetail.content) return []
-  return newsStore.newsDetail.content.split('\n\n').filter(p => p.trim())
+  return newsStore.newsDetail.content
+    .replace(/\r\n/g, '\n')
+    .split(/\n+/)
+    .filter(p => p.trim())
 })
 
 // 返回上一页

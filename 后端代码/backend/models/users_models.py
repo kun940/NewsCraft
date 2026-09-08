@@ -10,7 +10,7 @@ class User (Base):
     """
     __tablename__  = 'user'
 # 创建索引
-    table_args  = (
+    __table_args__= (
     Index ('username_UNIQUE', 'username'),
     Index ('phone_UNIQUE', 'phone'),
     )
@@ -43,7 +43,7 @@ class UserToken (Base):
     """
     __tablename__= "user_token"
     # 创建索引
-    table_args  = (
+    __table_args__ = (
     Index ("token_UNIQUE", "token"),
     Index ("fk_user_token_user_idx", "user_id"),
     )
