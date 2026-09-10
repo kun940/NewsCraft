@@ -33,10 +33,10 @@ auth:
 
 # --- 大模型客户端（对应 core/llm_client/ 预留目录）---
 llm:
-  provider: "dashscope"       # dashscope(通义千问) / openai / ollama(本地)
+  provider: "deepseek"       # dashscope(通义千问) / openai / ollama(本地)
   api_key: "${DASHSCOPE_API_KEY}"   # 后端代理调用，Key 不再放前端
-  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-  chat_model: "qwen-plus"
+  base_url: "https://api.deepseek.com"
+  chat_model: "deepseek-v4-flash"
   timeout: 60                  # 秒
   max_retries: 3               # 超时/限流重试
 
@@ -46,7 +46,7 @@ embedding:
   model: "text-embedding-v3"
   dimensions: 1024
 
-# --- 向量库（对应 core/rag_core/ 预留目录）---
+# --- 向量库（对应 ai_core/rag_core/ 预留目录）---
 vector_db:
   type: "in_memory"           # 阶段一用内存/本地文件，后期可换 Milvus
   collection: "news_vectors"

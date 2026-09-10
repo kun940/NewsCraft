@@ -15,6 +15,25 @@ dependencies = [
     "uvicorn[standard]>=0.52.4",
 ]
 
+# RAG AI 改造（见 docs/NewsCraft开发架构文档.md v1.2）
+# 独立为可选依赖组：复现期（M1）不需要，安装时 `uv sync --extra ai` 启用
+# 注：不依赖 langchain-community（无 1.0 稳定版），BM25 稀疏检索基于 langchain-core 自定义实现
+[project.optional-dependencies]
+ai = [
+    # LangChain 1.x 编排框架
+    "langchain>=1.0",
+    "langchain-core>=1.0",
+    "langchain-chroma>=1.0",     # Chroma 向量库集成
+    "langchain-ollama>=1.0",     # ChatOllama / OllamaEmbeddings（bge-m3）
+    "langchain-openai>=1.0",     # ChatOpenAI（通义/DeepSeek 兼容）
+    # 向量库与检索
+    "chromadb>=0.6",             # Chroma 持久化（0.4+ 起 persist() 已废弃）
+    "rank-bm25>=0.2.2",          # 自研 BM25Retriever 底层依赖
+    "jieba>=0.42.1",             # BM25 中文分词
+    # 异步任务
+    "arq>=0.26",                 # 向量化/摘要异步任务队列（复用 Redis）
+]
+
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
 default = true

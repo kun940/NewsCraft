@@ -1,0 +1,162 @@
+<html style="margin:0;padding:0;">
+<div style="background-color:transparent;box-sizing:border-box;font-family:'Roboto','PingFang SC','Segoe UI',Arial,sans-serif;color:#1A1B1C;max-width:780px;line-height:1.5;">
+
+  <!-- 总览 -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin:0 0 16px 0;">
+    <div style="flex:1 1 200px;min-width:0;padding:14px;border-radius:14px;background:linear-gradient(135deg,rgba(139,200,234,0.16),rgba(139,200,234,0.28));box-sizing:border-box;">
+      <div style="font-size:12px;color:#4B5563;">接口通过率</div>
+      <div style="font-size:24px;font-weight:600;margin-top:2px;">16 / 17</div>
+      <div style="font-size:12px;color:#4B5563;">仅 1 个接口存在缺陷</div>
+    </div>
+    <div style="flex:1 1 200px;min-width:0;padding:14px;border-radius:14px;background:linear-gradient(135deg,rgba(82,196,26,0.10),rgba(82,196,26,0.20));box-sizing:border-box;">
+      <div style="font-size:12px;color:#4B5563;">检查项</div>
+      <div style="font-size:24px;font-weight:600;color:#389E0D;margin-top:2px;">38 / 40 通过</div>
+      <div style="font-size:12px;color:#4B5563;">含正常流程与异常分支</div>
+    </div>
+    <div style="flex:1 1 200px;min-width:0;padding:14px;border-radius:14px;background:linear-gradient(135deg,rgba(234,102,104,0.10),rgba(234,102,104,0.20));box-sizing:border-box;">
+      <div style="font-size:12px;color:#4B5563;">失败项</div>
+      <div style="font-size:24px;font-weight:600;color:#CF1322;margin-top:2px;">POST /api/history/add</div>
+      <div style="font-size:12px;color:#4B5563;">500 · 响应序列化缺陷</div>
+    </div>
+  </div>
+
+  <!-- 模块分组 -->
+  <div style="border:1px solid rgba(0,0,0,0.08);border-radius:14px;padding:6px 12px 12px 12px;margin:0 0 12px 0;background:rgba(0,0,0,0.015);">
+
+    <div style="font-size:13px;font-weight:600;margin:8px 0 4px 0;color:#1F2937;">新闻模块 <span style="font-weight:400;color:#6B7280;">3 个接口 · 全部通过</span></div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(139,200,234,0.35);color:#1F4E5F;">GET</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/news/categories</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(139,200,234,0.35);color:#1F4E5F;">GET</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/news/list</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(139,200,234,0.35);color:#1F4E5F;">GET</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/news/detail</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+    </div>
+
+    <div style="border-top:1px dashed rgba(0,0,0,0.10);margin:8px 0 4px 0;"></div>
+    <div style="font-size:13px;font-weight:600;margin:8px 0 4px 0;color:#1F2937;">用户模块 <span style="font-weight:400;color:#6B7280;">5 个接口 · 全部通过</span></div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(148,216,195,0.40);color:#1D5B46;">POST</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/user/register</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(148,216,195,0.40);color:#1D5B46;">POST</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/user/login</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(139,200,234,0.35);color:#1F4E5F;">GET</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/user/info</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(228,212,143,0.45);color:#5C4A00;">PUT</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/user/update</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(228,212,143,0.45);color:#5C4A00;">PUT</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/user/password</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+    </div>
+
+    <div style="border-top:1px dashed rgba(0,0,0,0.10);margin:8px 0 4px 0;"></div>
+    <div style="font-size:13px;font-weight:600;margin:8px 0 4px 0;color:#1F2937;">收藏模块 <span style="font-weight:400;color:#6B7280;">5 个接口 · 全部通过</span></div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(139,200,234,0.35);color:#1F4E5F;">GET</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/favorite/check</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(148,216,195,0.40);color:#1D5B46;">POST</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/favorite/add</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(244,179,147,0.45);color:#7A3216;">DEL</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/favorite/remove</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(139,200,234,0.35);color:#1F4E5F;">GET</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/favorite/list</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(244,179,147,0.45);color:#7A3216;">DEL</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/favorite/clear</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+    </div>
+
+    <div style="border-top:1px dashed rgba(0,0,0,0.10);margin:8px 0 4px 0;"></div>
+    <div style="font-size:13px;font-weight:600;margin:8px 0 4px 0;color:#1F2937;">历史模块 <span style="font-weight:400;color:#6B7280;">4 个接口 · 1 个失败</span></div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;background:rgba(234,102,104,0.07);">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(148,216,195,0.40);color:#1D5B46;">POST</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;font-weight:600;color:#CF1322;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/history/add</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(234,102,104,0.18);color:#CF1322;">失败 · 500</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(139,200,234,0.35);color:#1F4E5F;">GET</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/history/list</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(244,179,147,0.45);color:#7A3216;">DEL</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/history/delete/{news_id}</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;">
+        <span style="flex:0 0 52px;text-align:center;font-size:11px;font-weight:600;padding:2px 0;border-radius:6px;background:rgba(244,179,147,0.45);color:#7A3216;">DEL</span>
+        <span style="flex:1;min-width:0;font-family:Consolas,'Courier New',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">/api/history/clear</span>
+        <span style="flex:0 0 auto;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(82,196,26,0.15);color:#389E0D;">通过</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bug 说明 -->
+  <div style="border:1px solid rgba(234,102,104,0.35);border-radius:14px;padding:12px 14px;background:rgba(234,102,104,0.06);box-sizing:border-box;">
+    <div style="font-size:13px;font-weight:600;color:#CF1322;margin-bottom:6px;">唯一缺陷：POST /api/history/add 返回 500</div>
+    <div style="font-size:12.5px;color:#1F2937;">
+      根因：<span style="font-family:Consolas,'Courier New',monospace;">schemas/history.py</span> 的 <span style="font-family:Consolas,'Courier New',monospace;">HistoryData</span> 缺少 <span style="font-family:Consolas,'Courier New',monospace;">model_config = ConfigDict(from_attributes=True)</span>，Pydantic 无法从 ORM 对象校验响应（同模块 <span style="font-family:Consolas,'Courier New',monospace;">FavoriteAddData</span> 有该配置）。<br/>
+      连带问题：<span style="font-family:Consolas,'Courier New',monospace;">crud/history.py</span> 的 <span style="font-family:Consolas,'Courier New',monospace;">history_add</span> 在函数内提前 <span style="font-family:Consolas,'Courier New',monospace;">commit()</span>，导致「数据已入库、客户端却收到 500」，产生脏数据。
+    </div>
+  </div>
+
+</div>
+</html>
