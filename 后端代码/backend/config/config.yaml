@@ -34,7 +34,7 @@ auth:
 # --- 大模型客户端（对应 core/llm_client/ 预留目录）---
 llm:
   provider: "deepseek"       # dashscope(通义千问) / openai / ollama(本地)
-  api_key: "${DASHSCOPE_API_KEY}"   # 后端代理调用，Key 不再放前端
+  api_key: "${DEEPSEEK_API_KEY}"   # 后端代理调用，Key 不再放前端
   base_url: "https://api.deepseek.com"
   chat_model: "deepseek-v4-flash"
   timeout: 60                  # 秒
@@ -42,14 +42,15 @@ llm:
 
 # --- Embedding 模型 ---
 embedding:
-  provider: "dashscope"
-  model: "text-embedding-v3"
+  provider: "ollama"
+  model: "bge-m3"
   dimensions: 1024
 
 # --- 向量库（对应 ai_core/rag_core/ 预留目录）---
 vector_db:
   type: "in_memory"           # 阶段一用内存/本地文件，后期可换 Milvus
   collection: "news_vectors"
+  persist_directory: "${CHROMA_PERSIST_DIR}"
   top_k: 5
 
 # --- RAG 问答参数 ---
@@ -65,3 +66,17 @@ rag:
 # --- 异步任务（对应 tasks/async_ai_task.py）---
 tasks:
   concurrency: 4
+  arq_redis_url: "redis://localhost:6379/1"
+
+# --- 个性化推荐（模块二）---
+recommend:
+  user_collection: "user_interests"   # 用户兴趣画像集合（与 news_vectors 同库）
+  recall_top_k: 50                    # 向量召回候选数（召回后内存分页）
+  hot_fallback_count: 50              # 热门兜底候选数（浏览量倒序）
+  cache_ttl: 600                      # 推荐结果缓存秒数（10 分钟）
+  behavior_days: 30                   # 参与画像计算的行为时间窗口（天）
+  weight_favorite: 2.0                # 收藏行为权重
+  weight_read: 1.0                    # 浏览行为权重
+  decay_base: 0.95                    # 时间衰减基数（公式见架构 6.4）
+  decay_period_hours: 24              # 衰减周期（小时）：0.95^(Δt/24h)
+  interest_tag_top_n: 10              # 兴趣标签保留数量

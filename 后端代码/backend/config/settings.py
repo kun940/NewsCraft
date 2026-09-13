@@ -108,6 +108,7 @@ class EmbeddingSettings(BaseModel):
 class VectorDBSettings(BaseModel):
     type: str = "in_memory"
     collection: str = "news_vectors"
+    persist_directory:str= "chroma_db"
     top_k: int = 5
 
 
@@ -123,7 +124,19 @@ class RAGSettings(BaseModel):
 
 class TaskSettings(BaseModel):
     concurrency: int = 4
+    arq_redis_url: str = "redis://127.0.0.1:6379/1"  # 127.0.0.1 绕过 DNS 解析，避免代理环境下 localhost 解析卡死
 
+class RecommendSettings(BaseModel):
+    user_collection: str = "user_interests"
+    recall_top_k: int = 50
+    hot_fallback_count: int = 50
+    cache_ttl: int = 600
+    behavior_days: int = 30
+    weight_favorite: float = 2.0
+    weight_read: float = 1.0
+    decay_base: float = 0.95
+    decay_period_hours: int = 24
+    interest_tag_top_n: int = 10
 
 class Settings(BaseSettings):
     """NewsCraft 全局配置，聚合 config.yaml + .env + 环境变量。"""
@@ -144,6 +157,7 @@ class Settings(BaseSettings):
     vector_db: VectorDBSettings = VectorDBSettings()
     rag: RAGSettings = RAGSettings()
     tasks: TaskSettings = TaskSettings()
+    recommend: RecommendSettings = RecommendSettings()
 
     @classmethod
     def settings_customise_sources(

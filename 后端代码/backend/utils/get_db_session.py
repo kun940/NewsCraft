@@ -1,13 +1,13 @@
 from sqlalchemy.ext.asyncio import create_async_engine,AsyncSession,async_sessionmaker
-from config import settings
-database=settings.settings.database
+from config.settings import settings
+database=settings.database
 #数据库连接参数
 #数据库URL
 ASYNC_DATABASE_URL = f"mysql+aiomysql://{database.user}:{database.password}@{database.host}:{database.port}/{database.name}?charset=utf8"
 #创建异步引擎
 async_engine=create_async_engine(
     ASYNC_DATABASE_URL,
-    echo=True,
+    echo=False,
     pool_size=10,
     max_overflow=20
 )
