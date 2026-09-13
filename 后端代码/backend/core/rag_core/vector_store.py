@@ -61,3 +61,29 @@ def upsert_user_interest(user_id: int, vector: list[float], tags: str) -> None:
             "updated_at": datetime.now().isoformat(timespec="seconds"),
         }],
     )
+
+def get_user_interest(user_id: int) -> dict | None:
+    """取回用户兴趣画像；没有则返回 None（触发冷启动兜底）。"""
+    got = get_user_store().get(ids=[str(user_id)], include=["embeddings", "metadatas"])
+    if not got.get("ids"):
+        return None
+    meta = (got.get("metadatas") or [{}])[0]
+    embeddings = got.get("embeddings")
+    if embeddings is None or len(embeddings) == 0:
+        return None
+    vector = embeddings[0]
+    if hasattr(vector, "tolist"):   # langchain-chroma 返回 numpy 数组，转成原生 list 再往下传
+        vector = vector.tolist()
+    return {
+        "vector": vector,
+        "tags": meta.get("interest_tags", ""),
+    }
+
+
+def similarity_search_by_vector_with_relevance_scores(
+    vector: list[float], top_k: int = 20, where: dict | None = None
+) -> list[tuple]:
+    """按用户兴趣向量召回新闻，返回 [(Document, relevance_score)]——分数越低越相似（cosine 距离）。"""
+    return get_news_store().similarity_search_by_vector_with_relevance_scores(
+        embedding=vector, k=top_k, filter=where
+    )

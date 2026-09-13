@@ -1,15 +1,16 @@
 import logging
 
 from arq import ArqRedis
-from fastapi import APIRouter, Depends,HTTPException
+from fastapi import APIRouter, Depends,HTTPException,Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from core.rag_core.recommend import get_recommendations
 from crud.ai_crud import is_task_done
 from crud.users import get_current_active_user
 from models.news_models import News
 from schemas.ai import VectorResponse, VectorRequest, VectorDetailItem, VectorResponseData, SummaryResponse, \
-    SummaryRequest, SummaryDetailItem, SummaryResponseData
+    SummaryRequest, SummaryDetailItem, SummaryResponseData, RecommendResponse
 from utils.get_arq_pool import get_arq_pool
 from utils.get_db_session import get_db
 
@@ -79,3 +80,16 @@ async def generate_summary(
         message="批量摘要任务已受理",
         data=SummaryResponseData(accepted_count=accepted, skipped_count=len(detail) - accepted, detail=detail),
     )
+
+@router.get("/news/recommend", response_model=RecommendResponse)
+async def recommend_news(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100, alias="pageSize"),
+    current_active_user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """个性化推荐（分页）：有兴趣画像→向量召回；无画像→热门兜底。"""
+    if not current_active_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    data = await get_recommendations(db, current_active_user.id, page, page_size)
+    return RecommendResponse(message="success", data=data)

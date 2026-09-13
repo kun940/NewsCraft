@@ -9,6 +9,11 @@ from crud.ai_crud import is_task_done, create_task_log, mark_task_success, mark_
 from models.news_models import News, Categories
 from utils.get_db_session import AsyncSessionLocal
 from arq.connections import RedisSettings as ArqRedisSettings
+
+from core.rag_core.interest import refresh_user_interest
+from core.rag_core.recommend import CACHE_KEY
+from utils.cache import get_redis
+
 logging.basicConfig(level=logging.INFO)
 logger=logging.getLogger(__name__)
 #任务函数
@@ -67,11 +72,19 @@ async def vectorize_news_batch(ctx, news_ids: list[int]) -> int:
         await db.commit()
     return done
 
+async def sync_user_interest(ctx, user_id: int, news_id: int, action: str) -> None:
+    """行为变化后全量重算该用户兴趣画像（幂等：覆盖写，重复触发安全）。"""
+    async with AsyncSessionLocal() as db:
+        await refresh_user_interest(db, user_id)
+    # 行为变了 → 主动失效该用户推荐缓存，保证下次推荐是新的
+    redis = await get_redis()
+    await redis.delete(CACHE_KEY.format(user_id=user_id))
+    logger.info("兴趣画像已刷新 user_id=%s（触发: news_id=%s action=%s）", user_id, news_id, action)
 
 class WorkerSettings:
     """Arq Worker 配置：函数注册 + Redis 连接 + 并发。"""
 
-    functions = [vectorize_news_batch, generate_summary_batch]
+    functions = [vectorize_news_batch, generate_summary_batch,sync_user_interest]
     redis_settings = ArqRedisSettings.from_dsn(settings.tasks.arq_redis_url)
     redis_settings.conn_timeout = 5
     redis_settings.conn_retries = 10

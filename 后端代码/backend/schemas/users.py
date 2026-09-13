@@ -19,6 +19,10 @@ class UserInfoBase(BaseModel):
     avatar: Optional[str] = Field(None, max_length=255, description="头像URL")
     gender: Optional[str] = Field(None, max_length=10, description="性别")
     bio: Optional[str] = Field(None, max_length=500, description="个人简介")
+    user_interest_tags: Optional[str] = Field(
+        default=None, alias="userInterestTags",
+        description="用户兴趣标签（逗号分隔），未生成时为 null",
+    )
     # 模型类配置
     model_config = ConfigDict(
         populate_by_name=True,  # alias/字段名兼容

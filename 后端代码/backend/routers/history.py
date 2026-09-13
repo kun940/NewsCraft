@@ -6,6 +6,7 @@ from crud.users import get_current_active_user
 from schemas.history import AddHistoryRequest, HistoryData, AddHistoryResponse, HistoryListData, HistoryListResponse, \
     HistoryDeleteResponse
 from utils.get_db_session import get_db
+from utils.interest_events import notify_interest_sync
 
 router=APIRouter(prefix="/api/history",tags=["history"])
 @router.post("/add",response_model=AddHistoryResponse)
@@ -14,6 +15,8 @@ async def add_history(req:AddHistoryRequest,current_active_user=Depends(get_curr
     if not current_active_user:
         raise HTTPException(status_code=401, detail="无用户令牌或令牌已过期")
     history=await history_add(db,req.news_id,current_active_user.id)
+    history = await history_add(db, req.news_id, current_active_user.id)
+    await notify_interest_sync(current_active_user.id, req.news_id, "read")  # ✅ 新增：浏览行为埋点
     history_add_response=AddHistoryResponse(data=history)
     return history_add_response
 

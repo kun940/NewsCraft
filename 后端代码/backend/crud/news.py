@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
 #获取新闻列表
 async def get_news_list(db:AsyncSession,categoryid:int,page:int=1,pageSize:int=10):
-    stmt=select(News).where(News.category_id == categoryid).offset((page-1)*pageSize).limit(pageSize)
+    stmt=select(News).where(News.category_id == categoryid).order_by(News.publish_time.desc()).offset((page-1)*pageSize).limit(pageSize)
     results = await db.execute(stmt)
     return results.scalars().all()
 #获取新闻总量（用于页面滚动）
