@@ -13,3 +13,26 @@ summary_prompt = ChatPromptTemplate.from_messages(
         ("human", "标题：{title}\n\n正文：{content}"),
     ]
 )
+"""RAG 问答 / 问题重写模板（模块三）。"""
+rag_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是 NewsCraft 平台的新闻助手。只能基于以下站内新闻上下文回答，禁止编造"
+            "上下文之外的信息；若上下文无法回答，明确说“站内暂无相关新闻”。"
+            "回答末尾列出引用新闻标题（编号对应）。",
+        ),
+        ("human", "【新闻上下文】\n{context}\n\n【用户问题】\n{question}"),
+    ]
+)
+
+rewrite_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "你是检索查询改写助手。把用户口语化的问题改写成适合搜索引擎/向量库检索的"
+            "简洁中文查询。只输出改写后的查询本身，不要任何解释、引号或前缀。",
+        ),
+        ("human", "用户问题：{question}"),
+    ]
+)

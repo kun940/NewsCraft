@@ -52,3 +52,16 @@ class NewsVectorLog(AiBase):
     error_message: Mapped[Optional[str]] = mapped_column(Text, comment="失败原因")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
+class AiChatRecord(AiBase):
+    """RAG 问答历史：question/answer/引用新闻。"""
+
+    __tablename__ = "ai_chat_record"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, comment="用户ID")
+    question: Mapped[str] = mapped_column(Text, comment="用户问题")
+    answer: Mapped[str] = mapped_column(Text, comment="AI回答")
+    #MySQL不支持存储列表类型数据，数字列表只能用字符串形式存储
+    reference_news_ids: Mapped[Optional[str]] = mapped_column(String(1000), comment="引用新闻ID逗号分隔")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, comment="创建时间")

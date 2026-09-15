@@ -120,6 +120,8 @@ class RAGSettings(BaseModel):
     enable_question_rewrite: bool = True
     enable_context_dedup: bool = True
     enable_citation: bool = True
+    hybrid_candidates: int = 50
+    rrf_k: int = 60
 
 
 class TaskSettings(BaseModel):

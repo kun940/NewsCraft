@@ -80,3 +80,5 @@ recommend:
   decay_base: 0.95                    # 时间衰减基数（公式见架构 6.4）
   decay_period_hours: 24              # 衰减周期（小时）：0.95^(Δt/24h)
   interest_tag_top_n: 10              # 兴趣标签保留数量
+  hybrid_candidates: 50       # 新增：每路（稠密/稀疏）召回候选数，双路在此范围内融合
+  rrf_k: 60                   #  新增：RRF 平滑常数：score(d) = Σ 1/(k + rank_i(d))

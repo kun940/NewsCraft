@@ -13,6 +13,17 @@ from schemas.ai import VectorResponse, VectorRequest, VectorDetailItem, VectorRe
     SummaryRequest, SummaryDetailItem, SummaryResponseData, RecommendResponse
 from utils.get_arq_pool import get_arq_pool
 from utils.get_db_session import get_db
+import json
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy import select
+
+from core.rag_core.rag_service import answer_question, chat_event_stream
+from crud.ai_crud import list_chat_records
+from schemas.ai import (
+    ChatRequest, ChatResponse, ChatData, SourceItem,
+    HistoryResponse, HistoryItem, HistoryData,
+)
 
 router=APIRouter(prefix="/api/ai",tags=["ai"])
 logger=logging.getLogger(__name__)
@@ -93,3 +104,62 @@ async def recommend_news(
         raise HTTPException(status_code=401, detail="未登录")
     data = await get_recommendations(db, current_active_user.id, page, page_size)
     return RecommendResponse(message="success", data=data)
+
+
+async def _sources_from_ref_ids(db, ref_ids: str | None) -> list[dict]:
+    """'1,2' → [{news_id, title}]（history 列表用；内部一律 Python 风格字段名）。"""
+    if not ref_ids:
+        return []
+    ids = [int(x) for x in ref_ids.split(",") if x.strip()]
+    if not ids:
+        return []
+    rows = await db.execute(select(News.id, News.title).where(News.id.in_(ids)))
+    return [{"news_id": news_id, "title": title} for news_id, title in rows.all()]
+
+
+@router.post("/chat")
+async def chat(
+    req: ChatRequest,
+    current_active_user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """RAG 智能问答：stream=true 走 SSE 流式；false 一次性 JSON（API 规范 5.4）。"""
+    if not current_active_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    if req.stream:
+        return StreamingResponse(
+            chat_event_stream(db, current_active_user.id, req.question),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",   # 关掉 Nginx/代理缓冲，保证逐 token 下发
+            },
+        )
+    data = await answer_question(db, current_active_user.id, req.question)
+    return ChatResponse(message="success", data=ChatData(**data))
+
+
+@router.get("/chat/history", response_model=HistoryResponse)
+async def chat_history(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100, alias="pageSize"),
+    current_active_user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """问答历史（分页，按时间倒序）。"""
+    if not current_active_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    records, total = await list_chat_records(db, current_active_user.id, page, page_size)
+    items = []
+    for r in records:
+        items.append(HistoryItem(
+            id=r.id,
+            question=r.question,
+            answer=r.answer,
+            reference_news_ids=r.reference_news_ids,
+            sources=[SourceItem(**s) for s in await _sources_from_ref_ids(db, r.reference_news_ids)],
+            created_at=r.created_at,
+        ))
+    has_more = page * page_size < total
+    return HistoryResponse(message="success", data=HistoryData(list=items, total=total, has_more=has_more))

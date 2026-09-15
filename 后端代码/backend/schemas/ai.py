@@ -73,3 +73,42 @@ class RecommendData(BaseModel):
 
 class RecommendResponse(ResponseBase):
     data: RecommendData
+
+class ChatRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=500, description="用户问题")
+    stream: bool = True     # true=SSE 流式（默认）；false=一次性 JSON
+
+
+class SourceItem(BaseModel):
+    """引用溯源条目：{ newsId, title }。"""
+    news_id: int = Field(serialization_alias="newsId")
+    title: str
+
+
+class ChatData(BaseModel):
+    record_id: Optional[int] = Field(default=None, serialization_alias="recordId")
+    answer: str
+    sources: list[SourceItem] = Field(default_factory=list)
+
+
+class ChatResponse(ResponseBase):
+    data: ChatData
+
+
+class HistoryItem(BaseModel):
+    id: int
+    question: str
+    answer: str
+    reference_news_ids: Optional[str] = Field(default=None, serialization_alias="referenceNewsIds")
+    sources: list[SourceItem] = Field(default_factory=list)
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+
+class HistoryData(BaseModel):
+    list: list[HistoryItem]
+    total: int
+    has_more: bool = Field(serialization_alias="hasMore")
+
+
+class HistoryResponse(ResponseBase):
+    data: HistoryData
