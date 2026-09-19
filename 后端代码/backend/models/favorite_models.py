@@ -12,7 +12,7 @@ class Favorite(Base):
     __tablename__='favorite'
     #创建表级别的配置
     __table_args__ = (
-        UniqueConstraint('user_id', 'news_id', name='user_niews_unique'),
+        UniqueConstraint('user_id', 'news_id', name='user_news_unique'),
         Index('fk_favorite_user_idx','user_id'),
         Index('fk_favorite_news_idx', 'news_id')
     )
