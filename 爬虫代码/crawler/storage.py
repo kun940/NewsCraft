@@ -70,30 +70,30 @@ def insert_news(
     author: Optional[str] = None,
     category_id: int,
     publish_time: Optional[datetime] = None,
-) -> bool:
+) -> Optional[int]:
     """
     插入一条新闻；标题已存在则跳过。
-    返回 True 表示本次新插入，False 表示重复跳过。
+    返回新插入新闻的 id；跳过（标题为空 / 重复）时返回 None。
     """
     if not title or not content:
         logger.warning("标题或正文为空，跳过入库")
-        return False
+        return None
     if news_exists_by_title(session, title):
-        return False
+        return None
 
-    session.add(
-        News(
-            title=title,
-            description=description,
-            content=content,
-            image=image,
-            author=author,
-            category_id=category_id,
-            views=0,
-            publish_time=publish_time or datetime.now(),
-        )
+    news = News(
+        title=title,
+        description=description,
+        content=content,
+        image=image,
+        author=author,
+        category_id=category_id,
+        views=0,
+        publish_time=publish_time or datetime.now(),
     )
-    return True
+    session.add(news)
+    session.flush()   # 立即分配自增 id，供调用方触发后续 AI 加工
+    return news.id
 
 
 class UrlStateStore:

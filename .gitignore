@@ -27,3 +27,5 @@ scripts/
 .env
 .env.*
 !.env.example
+
+chroma_db/

@@ -113,9 +113,25 @@ class CrawlConfig:
         return "网易新闻" if self.source == "netease" else "中国新闻网"
 
 
+class AiConfig:
+    """入库后自动触发的 AI 加工接口配置（向量化 + 摘要，后端 arq 异步执行）
+
+    - enabled：总开关，false 时爬虫只入库不触发 AI 加工
+    - base_url：后端服务地址（本地开发默认 http://127.0.0.1:8000）
+    - timeout / max_retries：请求失败重试策略；重试耗尽仅记日志，不阻塞入库
+    """
+
+    enabled = _get("AI_PROCESS_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+    base_url = _get("AI_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+    timeout = float(_get("AI_REQUEST_TIMEOUT", "10"))
+    max_retries = int(_get("AI_REQUEST_RETRIES", "2"))
+    retry_backoff = 1.0             # 重试基础间隔（秒，指数退避）
+
+
 class Settings:
     database = DatabaseConfig()
     crawl = CrawlConfig()
+    ai = AiConfig()
 
 
 settings = Settings()

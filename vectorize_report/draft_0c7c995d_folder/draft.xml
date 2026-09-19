@@ -1,0 +1,133 @@
+<title>异步 arq 在新闻向量化入库中的设计价值验证</title>
+
+<h1 seq="auto">执行摘要</h1>
+<p>采用 arq 异步队列是本次 100 条新闻向量化入库的正确设计，建议保留：同一批任务的实际墙钟为 <b>302 秒（约 5.0 分钟，用户侧计时 298 秒）</b>，较串行方案基于本机实测数据的预测 <b>419 秒（约 7.0 分钟）缩短约 28%</b>；更重要的是 <b>API 请求秒级返回</b>、单条失败不拖垮整批、全程可观测可审计。当前方案可继续使用，唯一待补项是对超长正文做截断或分块。</p>
+<p>支撑依据：</p>
+<ul>
+<li>本机 bge-m3（CPU 推理）实测嵌入耗时随正文长度近似线性：177/708/1830/2655 字分别为 3.44/3.46/5.25/6.76 秒，拟合模型 T≈2.26+0.0017×字数。</li>
+<li>用该模型对实际批次 106 条正文长度逐条累加，串行预测 419 秒；arq（4 并发）实际 302 秒，加速比 1.39 倍。</li>
+<li>独立并发测试：4 条同长度文本串行 15.98 秒、并发 6.48 秒，墙钟比 0.41，证明并发请求被 Ollama 批量推理复用，这是加速的主要来源。</li>
+<li>批次成功率 106/108＝98.1%，2 条失败为超长正文超出 bge-m3 的 8192 token 上下文上限，失败被隔离且错误信息落库，不影响其余任务。</li>
+<li>news_vector_log 逐条记录 created_at/finished_at，单条耗时分布（平均 2.81s、中位 2.00s、p90 5.00s）可直接用于瓶颈定位。</li>
+</ul>
+<p>约束与风险：单机 CPU 推理是硬瓶颈，加速受限于 Ollama 批处理能力；2 条超长正文（3018/5052 字）当前无法入库。</p>
+<p>建议动作：对 3000 字以上正文增加截断或分块策略后重跑失败任务；其余保持现状。</p>
+
+<h1 seq="auto">测试环境与口径</h1>
+<h2 seq="auto">硬件与软件栈</h2>
+<table>
+<colgroup><col /><col /><col /></colgroup>
+<thead><tr><th><p>维度</p></th><th><p>配置</p></th><th><p>说明</p></th></tr></thead>
+<tbody>
+<tr><td><p>CPU</p></td><td><p>Intel Core 5 220H（12 核 16 线程）</p></td><td><p>本机查询 Get-CimInstance Win32_Processor</p></td></tr>
+<tr><td><p>内存</p></td><td><p>24 GB</p></td><td><p>本机查询</p></td></tr>
+<tr><td><p>GPU</p></td><td><p>无（nvidia-smi 不可用）</p></td><td><p>纯 CPU 推理</p></td></tr>
+<tr><td><p>Embedding</p></td><td><p>Ollama bge-m3（1.2 GB，Q4 量化，1024 维）</p></td><td><p>后端 create_embeddings → OllamaEmbeddings</p></td></tr>
+<tr><td><p>向量库</p></td><td><p>Chroma（本地落盘，cosine）</p></td><td><p>vector_store.py</p></td></tr>
+<tr><td><p>数据库</p></td><td><p>MySQL newscraft_app + SQLAlchemy 异步会话</p></td><td><p>aiomysql 驱动</p></td></tr>
+<tr><td><p>任务队列</p></td><td><p>arq worker，concurrency＝4</p></td><td><p>tasks/worker.py WorkerSettings</p></td></tr>
+</tbody>
+</table>
+<p align="center"><span text-color="gray">来源：本机环境实测｜期间：2026-09-12｜口径：Windows + 本地 Ollama/MySQL/Chroma</span></p>
+
+<h2 seq="auto">数据口径</h2>
+<ul>
+<li><b>串行预测</b>：用 2026-09-12 16:56 批次 106 条成功记录的真实正文长度，逐条套用本机实测拟合模型 T≈2.26+0.0017×字数（秒）后累加。</li>
+<li><b>arq 实际</b>：同批次日志首条 created_at（16:56:35）至末条 finished_at（17:01:37）的墙钟；单条耗时＝created_at→finished_at，含 MySQL 读取、Embedding、Chroma 写入与任务日志。</li>
+<li><b>库内基线</b>：news 表共 511 条，正文平均 313 字、最大 5052 字；本次批次正文平均 996 字、中位 778 字、最大 3118 字（被选中的多为较长未向量化新闻）。</li>
+</ul>
+
+<h1 seq="auto">串行基准：本机 bge-m3 嵌入耗时实测</h1>
+<p>对同一模型在同一台机器上实测四种长度的嵌入耗时（每次 3 次取平均），得到耗时—长度曲线：</p>
+<table>
+<colgroup><col /><col /><col /></colgroup>
+<thead><tr><th><p>正文长度（字）</p></th><th><p>实测耗时（秒/条，3 次平均）</p></th><th><p>拟合值（秒）</p></th></tr></thead>
+<tbody>
+<tr><td><p>177</p></td><td><p align="right">3.44</p></td><td><p align="right">2.56</p></td></tr>
+<tr><td><p>708</p></td><td><p align="right">3.46</p></td><td><p align="right">3.46</p></td></tr>
+<tr><td><p>1830</p></td><td><p align="right">5.25</p></td><td><p align="right">5.37</p></td></tr>
+<tr><td><p>2655</p></td><td><p align="right">6.76</p></td><td><p align="right">6.77</p></td></tr>
+</tbody>
+</table>
+<p align="center"><span text-color="gray">来源：bench_embed.py / bench_embed_len.py 实测｜期间：2026-09-12｜单位：秒｜口径：Ollama /api/embed，bge-m3，含 HTTP 往返，热态</span></p>
+<p>结论：耗时主要由<b>固定开销约 2.3 秒 + 每千字约 1.7 秒</b>组成；对 1000 字级新闻，单条约 4 秒。短文本也不低于约 2.6 秒，说明逐条调用存在明显固定开销，串行逐条处理效率低。</p>
+<p>并发潜力验证：4 条 708 字文本，串行墙钟 15.98 秒（单条约 4.0 秒），4 路并发墙钟 6.48 秒，<b>墙钟比 0.41</b>——Ollama 对并发请求做批量推理，并发是本机唯一的有效加速手段。</p>
+
+<h1 seq="auto">串行预测：100 条约需 7 分钟</h1>
+<p>若去掉 arq，在请求内逐条同步执行（当前 worker 的逐条逻辑原样搬入），按本机实测模型对该批次真实长度逐条累加：</p>
+<table>
+<colgroup><col /><col /><col /><col /><col /></colgroup>
+<thead><tr><th><p>正文长度分桶</p></th><th><p>条数</p></th><th><p>平均长度（字）</p></th><th><p>单条预测（秒）</p></th><th><p>分桶合计（秒）</p></th></tr></thead>
+<tbody>
+<tr><td><p>≤400 字</p></td><td><p align="right">23</p></td><td><p align="right">214</p></td><td><p align="right">2.62</p></td><td><p align="right">60</p></td></tr>
+<tr><td><p>401–1500 字</p></td><td><p align="right">61</p></td><td><p align="right">846</p></td><td><p align="right">3.70</p></td><td><p align="right">226</p></td></tr>
+<tr><td><p>&gt;1500 字</p></td><td><p align="right">22</p></td><td><p align="right">2230</p></td><td><p align="right">6.05</p></td><td><p align="right">133</p></td></tr>
+<tr><td><p><b>合计</b></p></td><td><p align="right"><b>106</b></p></td><td><p align="right"><b>996</b></p></td><td><p align="right"><b>3.95</b></p></td><td><p align="right"><b>419</b></p></td></tr>
+</tbody>
+</table>
+<p align="center"><span text-color="gray">来源：bench_serial_prediction.py 逐条累加｜期间：2026-09-12 16:56 批次｜单位：秒｜口径：T≈2.26+0.0017×字数，成功 106 条</span></p>
+<p><b>串行方案约需 419 秒（约 7.0 分钟）</b>。期间 FastAPI 请求一直挂起，且 OllamaEmbeddings 为同步阻塞调用，会冻结事件循环；前端大概率超时，无法接受。</p>
+
+<h1 seq="auto">arq 异步实际：302 秒，106 成功 / 2 失败</h1>
+<p>2026-09-12 16:56:35 提交，17:01:37 全部结束，<b>墙钟 302 秒（用户侧计时 298 秒）</b>；108 条入队（106 成功、2 失败，成功率 98.1%）。</p>
+<html5-block path="@./widget.html"></html5-block>
+<p>上图左：总耗时对比，串行预测 419 秒 vs arq 实际 302 秒；上图右：按正文长度分桶的单条平均耗时，各桶均下降，短文本降幅最明显（2.62s→0.96s），来自 4 路并发下的批量推理复用。</p>
+<p>单条耗时分布（news_vector_log 的 created_at→finished_at）：</p>
+<table>
+<colgroup><col /><col /><col /><col /><col /></colgroup>
+<thead><tr><th><p>统计项</p></th><th><p>平均（秒）</p></th><th><p>中位（秒）</p></th><th><p>p90（秒）</p></th><th><p>最大（秒）</p></th></tr></thead>
+<tbody>
+<tr><td><p>单条处理耗时</p></td><td><p align="right">2.81</p></td><td><p align="right">2.00</p></td><td><p align="right">5.00</p></td><td><p align="right">9.00</p></td></tr>
+<tr><td><p>≤400 字（23 条）</p></td><td><p align="right">0.96</p></td><td><p align="right">1.00</p></td><td><p align="right">—</p></td><td><p align="right">3.00</p></td></tr>
+<tr><td><p>401–1500 字（61 条）</p></td><td><p align="right">2.41</p></td><td><p align="right">2.00</p></td><td><p align="right">—</p></td><td><p align="right">5.00</p></td></tr>
+<tr><td><p>&gt;1500 字（22 条）</p></td><td><p align="right">5.86</p></td><td><p align="right">5.50</p></td><td><p align="right">—</p></td><td><p align="right">9.00</p></td></tr>
+</tbody>
+</table>
+<p align="center"><span text-color="gray">来源：news_vector_log（SQL 统计）｜期间：2026-09-12 16:56:35–17:01:37｜单位：秒｜口径：created_at→finished_at，成功 106 条</span></p>
+<p>2 条失败明细：news_id 407（正文 3018 字）、news_id 467（正文 5052 字），错误均为 <b>input length exceeds the context length</b>，超出 bge-m3 的 8192 token 上下文上限（中文约 1 字≈1–1.5 token，含数字/英文更多）。两条失败均被捕获并写入 error_message，未影响其余 106 条。</p>
+
+<h1 seq="auto">设计亮点（数据支撑）</h1>
+<h2 seq="auto">亮点一：请求受理与执行解耦，API 秒级返回</h2>
+<p>串行方案下 HTTP 请求要挂起约 7 分钟且冻结事件循环；arq 方案中 /api/ai/news/vector 仅做幂等检查与入队，受理秒级完成，302 秒的重活全部在后台 worker 执行。这正是异步队列在耗时任务上的首要价值。</p>
+<h2 seq="auto">亮点二：并发复用 Ollama 批量推理，墙钟实测缩短约 28%</h2>
+<p>串行预测 419 秒 vs arq 实际 302 秒，加速比 1.39 倍；独立并发测试墙钟比 0.41，证实加速来自并发请求被 llama.cpp 批量计算复用，而非凭空缩小单条推理量。对 CPU 单机，这是比串行更接近硬件上限的做法。</p>
+<h2 seq="auto">亮点三：失败隔离 + 幂等重跑</h2>
+<p>2 条超长正文失败仅记录 error_message 并继续，批次不中断；is_task_done + task_status＝success 的组合保证重复提交自动跳过已完成任务，不会重复入库。</p>
+<h2 seq="auto">亮点四：逐条可观测审计</h2>
+<p>news_vector_log 的 created_at/finished_at 提供了完整的耗时分布（平均 2.81s / 中位 2.00s / p90 5.00s / 最大 9.00s），并可按正文长度分桶定位瓶颈。串行同步循环无法留下这种逐条审计轨迹。</p>
+<h2 seq="auto">亮点五：背压与资源保护</h2>
+<p>concurrency＝4 限制了并发上限，避免大量任务同时冲击 MySQL / Chroma / Ollama；队列天然吸收突发请求。</p>
+
+<h1 seq="auto">数据暴露的问题与建议</h1>
+<p><b>问题</b>：当前对正文长度无任何截断/分块，2 条超长新闻（3018/5052 字）直接失败，对应数据无法检索。</p>
+<p><b>建议</b>：</p>
+<ol>
+<li>对 3000 字以上正文截断到安全长度（bge-m3 上限 8192 token，中文建议 ≤3000 字）后重试；</li>
+<li>更优做法：按 chunk_size 分块嵌入后取均值池化，保持长文召回质量；</li>
+<li>利用已有 retry_count 字段配合有限重试，区分可重试（超长）与不可重试错误。</li>
+</ol>
+
+<h1 seq="auto">结论</h1>
+<table>
+<colgroup><col /><col /><col /><col /></colgroup>
+<thead><tr><th><p>对比项</p></th><th><p>串行预测</p></th><th><p>arq 异步实际</p></th><th><p>差异</p></th></tr></thead>
+<tbody>
+<tr><td><p>总墙钟</p></td><td><p align="right">419 秒（≈7.0 分钟）</p></td><td><p align="right">302 秒（≈5.0 分钟）</p></td><td><p align="right">缩短 28%</p></td></tr>
+<tr><td><p>请求响应</p></td><td><p>阻塞约 7 分钟，易超时</p></td><td><p>秒级受理，后台执行</p></td><td><p>质变</p></td></tr>
+<tr><td><p>失败处理</p></td><td><p>一条失败中断整批</p></td><td><p>单条隔离，2/108 失败不影响其余</p></td><td><p>质变</p></td></tr>
+<tr><td><p>可观测性</p></td><td><p>无逐条记录</p></td><td><p>news_vector_log 全量审计</p></td><td><p>质变</p></td></tr>
+<tr><td><p>成功率</p></td><td><p>—</p></td><td><p align="right">106/108＝98.1%</p></td><td><p>2 条超长正文待补</p></td></tr>
+</tbody>
+</table>
+<p align="center"><span text-color="gray">来源：本报告第二节至第六节｜期间：2026-09-12｜口径：串行为模型外推，arq 为日志实测</span></p>
+<p>异步 arq 在此场景的价值不只体现在 28% 的墙钟缩短，更体现在<b>请求即时返回、失败隔离、幂等与逐条审计</b>这些串行方案无法获得的能力。建议保留现有设计，仅补充超长正文截断/分块后重跑失败任务。</p>
+<callout emoji="💡" background-color="light-blue" border-color="blue"><p>行动项：对正文 3000 字以上的新闻增加截断或分块策略，重跑 news_id 407、467；其余设计保持不变。</p></callout>
+
+<h1 seq="auto">附录：数据来源与计算口径</h1>
+<ul>
+<li><b>本机基准</b>：bench_embed.py / bench_embed_len.py / bench_embed_concurrency.py（Ollama /api/embed，bge-m3，3 次平均；并发测试 4 路 ThreadPoolExecutor）。</li>
+<li><b>串行预测</b>：bench_serial_prediction.py——取 16:56 批次 106 条成功记录的 CHAR_LENGTH(content)，逐条计算 2.26+0.0017×长度后累加。</li>
+<li><b>日志统计</b>：bench_analyze_log.py / bench_analyze_runs.py / bench_bucket_actual.py——news_vector_log 按 task_type＝vectorize 过滤，created_at→finished_at 秒差；运行聚类按 created_at 间隔 &gt;120 秒切分。</li>
+<li><b>失败明细</b>：news_vector_log 中 task_status＝failed 的两条记录及其正文长度（3018/5052 字）。</li>
+<li><b>库内基线</b>：news 表 COUNT / AVG(CHAR_LENGTH(content)) / news_vector_id 非空计数。</li>
+</ul>

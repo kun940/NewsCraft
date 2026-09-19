@@ -1,0 +1,58 @@
+# ============================================================
+# .dockerignore —— 放在项目根目录，构建上下文时排除
+# 作用：① 减小构建上下文体积，加快 docker build
+#       ② 防止把密钥/本地数据/无关产物打进镜像
+# ============================================================
+
+# ---- Git / IDE ----
+.git
+.gitignore
+.github
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---- Python ----
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# ---- 环境变量与密钥（绝不进镜像！运行时用 --env-file 或 compose env 注入）----
+.env
+.env.*
+!.env.example
+
+# ---- Node ----
+node_modules/
+**/node_modules/
+**/dist/
+
+# ---- 构建产物 / 报告（镜像内重新构建或不需要）----
+api_test_report.html
+vectorize_report/
+*.log
+
+# ---- 运行时持久化数据（用 volume 挂载，不进镜像）----
+chroma_db/
+*.sqlite
+*.db
+*.sqlite3
+
+# ---- 文档与设计稿（镜像不需要）----
+docs/
+*.md
+!README.md
+
+# ---- 操作系统垃圾 ----
+.DS_Store
+Thumbs.db
+desktop.ini

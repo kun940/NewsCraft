@@ -1,0 +1,70 @@
+# syntax=docker/dockerfile:1
+
+# ============================================================
+# NewsCraft 后端镜像（FastAPI + arq worker 共用同一份代码）
+#
+# 构建（项目根目录执行）：
+#   docker build -f Dockerfile.backend -t newscraft-backend .
+#   # 需要 RAG/AI 能力时：
+#   docker build -f Dockerfile.backend --build-arg INSTALL_AI=true -t newscraft-backend .
+#
+# 运行 API：
+#   docker run -p 8000:8000 --env-file .env newscraft-backend
+#
+# 运行 arq worker（同一镜像，换 command）：
+#   docker run --env-file .env newscraft-backend arq tasks.worker.WorkerSettings
+# ============================================================
+
+# ---------- 1. 构建阶段：用 uv 装依赖 ----------
+FROM python:3.13-slim AS builder
+
+# 官方 uv 静态二进制
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never
+
+WORKDIR /app
+
+# 先只拷依赖清单，充分利用 Docker 层缓存（代码变动不触发重装依赖）
+COPY pyproject.toml uv.lock ./
+
+# 是否安装 RAG/AI 可选依赖组（langchain/chromadb/arq 等，体积大）
+ARG INSTALL_AI=false
+
+RUN set -eux; \
+    if [ "$INSTALL_AI" = "true" ]; then \
+        uv sync --extra ai --no-install-project --no-dev; \
+    else \
+        uv sync --no-install-project --no-dev; \
+    fi
+
+# ---------- 2. 运行阶段 ----------
+FROM python:3.13-slim AS runtime
+
+ENV TZ=Asia/Shanghai \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+# 从构建阶段拷出虚拟环境（不要在运行层 pip install，保持镜像小）
+COPY --from=builder /app/.venv /app/.venv
+
+# 后端代码：main.py 在 backend/ 下，且使用 `from routers import ...` 顶层导入，
+# 所以运行时工作目录必须是 /app/backend
+COPY 后端代码/backend/ ./backend/
+
+# 非 root 运行
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+WORKDIR /app/backend
+
+EXPOSE 8000
+
+# 默认启动 API；worker 用 docker run 覆盖 command
+#   worker: arq tasks.worker.WorkerSettings
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,77 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="use-iframe" content="true">
+  <meta name="html-box-height-mode" content="auto">
+  <meta name="description" content="向量化入库 100 条新闻：串行预测与 arq 异步实际耗时对比，以及按正文长度分桶的单条平均耗时对比。数据来自本机 bge-m3 实测基准与 news_vector_log 日志。">
+  <title>向量化耗时对比</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #fff; color: #1A2B4A; padding: 8px 0; }
+    .wrap { width: 100%; max-width: 100%; }
+    .panel { width: 100%; margin-bottom: 12px; }
+    .panel-title { font-size: 15px; font-weight: 600; color: #1A2B4A; margin: 4px 2px 2px; }
+    .panel-sub { font-size: 12px; color: #758092; margin: 0 2px 6px; }
+    .chart { width: 100%; height: 300px; }
+    .note { font-size: 11px; color: #758092; margin-top: 2px; line-height: 1.5; }
+    .fallback { display: none; font-size: 13px; color: #555; padding: 12px; border: 1px dashed #BABFC9; border-radius: 6px; }
+    @media (min-width: 600px) { .chart { height: 330px; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="panel-title">总耗时对比：串行预测 vs arq 异步实际（100 条新闻向量化入库）</div>
+      <div class="panel-sub">单位：秒（墙钟）。数据来源：本机 bge-m3 实测耗时模型逐条外推 / news_vector_log 日志 2026-09-12 16:56:35→17:01:37</div>
+      <div id="chartA" class="chart"></div>
+      <div id="fallbackA" class="fallback"><b>图表加载失败，关键数据：</b>串行预测 419 秒（≈7.0 分钟）；arq 异步实际 302 秒（≈5.0 分钟），加速约 1.39 倍。</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">单条平均耗时（按正文长度分桶）：串行预测 vs arq 实际</div>
+      <div class="panel-sub">单位：秒/条。串行按实测模型 T≈2.26+0.0017×字数 外推；arq 实际取自日志 created_at→finished_at。桶内条数：≤400字 23 条、401–1500字 61 条、&gt;1500字 22 条</div>
+      <div id="chartB" class="chart"></div>
+      <div id="fallbackB" class="fallback"><b>图表加载失败，关键数据：</b>≤400字：串行 2.62s vs 实际 0.96s；401–1500字：串行 3.70s vs 实际 2.41s；&gt;1500字：串行 6.05s vs 实际 5.86s。</div>
+    </div>
+    <p class="note">数据口径：串行预测 = 用 2026-09-12 16:56 批次 106 条成功记录的真实正文长度，逐条套用本机实测拟合 T≈2.26+0.0017×字数 后累加（419s）；arq 实际 = 同批次日志首条 created_at 至末条 finished_at（302s，用户侧计时 298s）。单条耗时均含 MySQL 读取、Chroma 写入与日志开销。</p>
+  </div>
+  <script>
+    (function () {
+      function init() {
+        if (typeof echarts === "undefined") {
+          document.getElementById("fallbackA").style.display = "block";
+          document.getElementById("fallbackB").style.display = "block";
+          return;
+        }
+        var base = "#1A2B4A";
+        var aux = "#758092";
+        var optA = {
+          backgroundColor: "transparent",
+          tooltip: { trigger: "axis", triggerOn: "click", renderMode: "richText", confine: true, textStyle: { fontSize: 11, lineHeight: 15 }, padding: [6, 8] },
+          grid: { left: 90, right: 60, top: 24, bottom: 30, containLabel: true },
+          xAxis: { type: "value", name: "秒", axisLabel: { color: "#555", fontSize: 11 }, splitLine: { lineStyle: { color: "#eee" } } },
+          yAxis: { type: "category", data: ["arq 异步实际", "串行预测"], axisLabel: { color: "#1A2B4A", fontSize: 12, fontWeight: 600 } },
+          series: [{ type: "bar", barWidth: 34, label: { show: true, position: "right", formatter: function (p) { return p.value + " s（" + (p.value / 60).toFixed(1) + " 分钟）"; }, color: "#1A2B4A", fontSize: 12 }, data: [{ value: 302, itemStyle: { color: aux } }, { value: 419, itemStyle: { color: base } }] }]
+        };
+        var optB = {
+          backgroundColor: "transparent",
+          tooltip: { trigger: "axis", triggerOn: "click", renderMode: "richText", confine: true, textStyle: { fontSize: 11, lineHeight: 15 }, padding: [6, 8] },
+          legend: { top: 0, itemWidth: 14, itemHeight: 8, textStyle: { color: "#6B7280", fontSize: 11 } },
+          grid: { left: 40, right: 24, top: 36, bottom: 34, containLabel: true },
+          xAxis: { type: "category", data: ["≤400 字\n(23 条)", "401–1500 字\n(61 条)", ">1500 字\n(22 条)"], axisLabel: { color: "#555", fontSize: 11 } },
+          yAxis: { type: "value", name: "秒/条", axisLabel: { color: "#555", fontSize: 11 }, splitLine: { lineStyle: { color: "#eee" } } },
+          series: [
+            { name: "串行预测", type: "bar", barWidth: 26, itemStyle: { color: base }, label: { show: true, position: "top", color: "#1A2B4A", fontSize: 11 }, data: [2.62, 3.70, 6.05] },
+            { name: "arq 实际", type: "bar", barWidth: 26, itemStyle: { color: aux }, label: { show: true, position: "top", color: "#1A2B4A", fontSize: 11 }, data: [0.96, 2.41, 5.86] }
+          ]
+        };
+        echarts.init(document.getElementById("chartA")).setOption(optA);
+        echarts.init(document.getElementById("chartB")).setOption(optB);
+      }
+      init();
+    })();
+  </script>
+</body>
+</html>

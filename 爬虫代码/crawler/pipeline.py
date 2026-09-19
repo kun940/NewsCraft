@@ -26,6 +26,7 @@ from sqlalchemy.orm import sessionmaker
 
 from config import settings
 from crawler import netease
+from crawler.ai_client import AiClient
 from crawler.fetcher import FetchError, Fetcher
 from crawler.parser import NewsDetail, parse_detail, parse_rss
 from crawler.storage import (
@@ -135,6 +136,7 @@ def _run_chinanews(limit: int = 0) -> CrawlStats:
             details[url] = detail
 
     # ---------- 4. 串行入库 ----------
+    inserted_ids: list[int] = []
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
     try:
         with SessionLocal() as session:
@@ -162,6 +164,7 @@ def _run_chinanews(limit: int = 0) -> CrawlStats:
                 )
                 if inserted:
                     stats.inserted += 1
+                    inserted_ids.append(inserted)
                     logger.info("入库成功：%s（%s）", detail.title, item.category)
                 else:
                     stats.duplicated += 1
@@ -173,6 +176,7 @@ def _run_chinanews(limit: int = 0) -> CrawlStats:
         raise
 
     state.save()
+    _trigger_ai_processing(inserted_ids)
     _log_summary(stats)
     return stats
 
@@ -235,6 +239,7 @@ def _run_netease(limit: int = 0) -> CrawlStats:
             details[url] = detail
 
     # ---------- 3. 串行入库（含时效过滤） ----------
+    inserted_ids: list[int] = []
     now = datetime.now()
     SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
     try:
@@ -265,6 +270,7 @@ def _run_netease(limit: int = 0) -> CrawlStats:
                 )
                 if inserted:
                     stats.inserted += 1
+                    inserted_ids.append(inserted)
                     logger.info("入库成功：%s（%s）", detail["title"], category)
                 else:
                     stats.duplicated += 1
@@ -276,6 +282,7 @@ def _run_netease(limit: int = 0) -> CrawlStats:
         raise
 
     state.save()
+    _trigger_ai_processing(inserted_ids)
     _log_summary(stats)
     return stats
 
@@ -296,6 +303,21 @@ def _shorten(content: str, length: int = 100) -> str:
     """正文太长时截断生成简介"""
     text = " ".join(content.split())
     return text[:length] + ("…" if len(text) > length else "")
+
+
+def _trigger_ai_processing(news_ids: list[int]) -> None:
+    """
+    新入库新闻提交后触发后端 AI 加工（向量化 + 摘要）。
+
+    只发请求、不等待执行结果（后端 arq worker 异步处理）；
+    后端不可达时 AiClient 内部已记 warning，此处不抛异常、不阻断爬虫。
+    """
+    if not news_ids:
+        return
+    try:
+        AiClient().process_new_news(news_ids)
+    except Exception:   # 兜底：任何异常都不能影响入库主流程
+        logger.exception("触发 AI 加工出现未预期异常（不影响本次入库结果）")
 
 
 def _log_summary(stats: CrawlStats) -> None:

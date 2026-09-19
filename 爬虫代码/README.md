@@ -1,4 +1,4 @@
-# NewsCraft 新闻爬虫（爬虫代码/）
+﻿# NewsCraft 新闻爬虫（爬虫代码/）
 
 基于 `newscraft_app` 数据库的新闻表及相关表设计的新闻爬虫，从主流新闻网站抓取新闻入库。
 与 `后端代码/` 平级，独立运行，不依赖后端代码，只共享同一个 MySQL 数据库。
@@ -50,6 +50,7 @@ RSS「即时新闻」实时滚动，列表稳定，但约 40% 为纯文字稿（
 │   ├── parser.py           # 中新网适配器：RSS 列表解析 + 详情页正文解析
 │   ├── models.py           # SQLAlchemy 模型：news_category / news（与后端字段对齐）
 │   ├── storage.py          # 入库：建表、分类兜底创建、标题查重插入、URL 状态持久化
+│   ├── ai_client.py        # 入库后触发后端向量化 + 摘要（发请求即受理，失败不影响入库）
 │   └── pipeline.py         # 流水线编排：按数据源分派 → 列表 → 过滤 → 并发抓详情 → 串行入库
 ├── data/
 │   └── crawled_urls.json   # 已抓 URL 状态（自动生成，断点续爬，git 忽略）
@@ -106,6 +107,10 @@ ThreadPoolExecutor（默认 4 线程）并发抓详情页
    │  ① 分类兜底创建 → ② 标题查重 → ③ 插入 news → ④ 标记 URL 状态
    ▼
 data/crawled_urls.json + logs/crawler.log
+   │  若有新入库
+   ▼
+触发后端 AI 加工：POST /api/ai/news/vector（向量化）+ /api/ai/news/summary（摘要）
+（后端 arq 异步执行；请求失败仅记日志，不影响入库；可用空 body 补做存量）
 ```
 
 网易数据源额外做**时效过滤**：详情发布时间超过 `max_age_days`（默认 3 天）的旧闻跳过，
@@ -138,6 +143,20 @@ cd 爬虫代码
 | `--log-level` | INFO | DEBUG/INFO/WARNING/ERROR |
 
 数据库连接可用环境变量覆盖：`DB_HOST` / `DB_PORT` / `DB_USER` / `MYSQL_PASSWORD` / `DB_NAME`。
+
+入库后 AI 加工可用环境变量覆盖：
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `AI_PROCESS_ENABLED` | true | 总开关；false 时只入库不触发 AI 加工 |
+| `AI_BASE_URL` | http://127.0.0.1:8000 | 后端服务地址（应指向后端 arq worker 同一实例） |
+| `AI_REQUEST_TIMEOUT` | 10 | 单次请求超时（秒） |
+| `AI_REQUEST_RETRIES` | 2 | 失败重试次数（重试耗尽仅记日志） |
+
+> AI 加工实际执行依赖后端服务在线（FastAPI + arq worker）。后端未启动时爬虫正常入库，
+> 日志记录「触发失败」，后续可用空 body 调用
+> `POST /api/ai/news/vector` 与 `POST /api/ai/news/summary` 补做存量（缺省处理全部未加工新闻）。
+
 
 ## 七、去重与幂等策略
 
