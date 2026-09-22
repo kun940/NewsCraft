@@ -1,5 +1,6 @@
 """新闻内容进出向量库"""
 from datetime import datetime
+from functools import lru_cache
 
 from langchain_chroma import Chroma
 
@@ -8,8 +9,14 @@ from core.rag_core.models import create_embeddings
 
 NEWS_COLLECTION = settings.vector_db.collection
 
-def get_news_store()-> Chroma:
-    """持久化新闻向量集合（cosine 距离，local 落盘到 persist_directory）。"""
+
+@lru_cache(maxsize=None)
+def get_news_store() -> Chroma:
+    """持久化新闻向量集合（cosine 距离，local 落盘到 persist_directory）。
+
+    用 lru_cache 做单例：chromadb 新版 Rust 绑定在频繁创建/销毁
+    PersistentClient 时会报 'RustBindingsAPI' object has no attribute 'bindings'。
+    """
     return Chroma(
         collection_name=NEWS_COLLECTION,
         embedding_function=create_embeddings(),
@@ -38,8 +45,11 @@ def get_news_by_ids(news_ids: list[int]) -> list[dict]:
     return rows
 
 """持久化用户画像向量，与新闻向量共用一个库的持久化目录"""
-USER_COLLECTION=settings.recommend.user_collection
-def get_user_store()-> Chroma:
+USER_COLLECTION = settings.recommend.user_collection
+
+
+@lru_cache(maxsize=None)
+def get_user_store() -> Chroma:
     return Chroma(
         collection_name=USER_COLLECTION,
         embedding_function=create_embeddings(),

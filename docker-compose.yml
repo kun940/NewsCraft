@@ -77,7 +77,10 @@ services:
       # Chroma 向量库持久化目录（挂载到卷）
       CHROMA_PERSIST_DIR: /data/chroma
       APP__ENV: prod
+      EMBEDDING__BASE_URL: http://host.docker.internal:11434
       APP__DEBUG: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - chroma_data:/data/chroma
     ports:
@@ -107,8 +110,11 @@ services:
       TASKS__ARQ_REDIS_URL: redis://redis:6379/1
       CHROMA_PERSIST_DIR: /data/chroma
       APP__ENV: prod
+      EMBEDDING__BASE_URL: http://host.docker.internal:11434
     volumes:
       - chroma_data:/data/chroma
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: ["arq", "tasks.worker.WorkerSettings"]
     depends_on:
       mysql:
@@ -117,6 +123,41 @@ services:
         condition: service_healthy
       backend-api:
         condition: service_started
+    networks:
+      - newscraft
+
+  # ---------------- 种子数据 AI 加工（一次性任务，跑完即退）----------------
+  # 等 MySQL initdb 把种子 SQL 跑完后，自动对种子新闻执行 摘要生成 + 向量化
+  seed-ai-process:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        INSTALL_AI: "true"
+    image: newscraft-backend:latest
+    container_name: newscraft-seed-ai
+    restart: "no"
+    env_file: .env
+    environment:
+      DATABASE__HOST: mysql
+      DATABASE__PORT: "3306"
+      REDIS__HOST: redis
+      TASKS__ARQ_REDIS_URL: redis://redis:6379/1
+      CHROMA_PERSIST_DIR: /data/chroma
+      APP__ENV: prod
+      EMBEDDING__BASE_URL: http://host.docker.internal:11434
+      APP__DEBUG: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - chroma_data:/data/chroma
+      - ./scripts:/app/scripts:ro
+    command: ["python", "/app/scripts/seed_ai_process.py"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - newscraft
 

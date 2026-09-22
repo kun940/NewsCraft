@@ -58,7 +58,8 @@ COPY --from=builder /app/.venv /app/.venv
 COPY 后端代码/backend/ ./backend/
 
 # 非 root 运行
-RUN useradd -m appuser && chown -R appuser:appuser /app
+RUN useradd -m appuser && chown -R appuser:appuser /app \
+    && mkdir -p /data/chroma && chown -R appuser:appuser /data
 USER appuser
 
 WORKDIR /app/backend

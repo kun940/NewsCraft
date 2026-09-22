@@ -44,6 +44,7 @@ llm:
 embedding:
   provider: "ollama"
   model: "bge-m3"
+  base_url: "http://localhost:11434"
   dimensions: 1024
 
 # --- 向量库（对应 ai_core/rag_core/ 预留目录）---

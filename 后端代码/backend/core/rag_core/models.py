@@ -19,4 +19,4 @@ def create_chat_model(llm=None):
 
 def create_embeddings(embedding=None):
     embedding = embedding or settings.embedding
-    return OllamaEmbeddings(model=embedding.model)
+    return OllamaEmbeddings(model=embedding.model, base_url=embedding.base_url)

@@ -3,7 +3,7 @@ from config.settings import settings
 database=settings.database
 #数据库连接参数
 #数据库URL
-ASYNC_DATABASE_URL = f"mysql+aiomysql://{database.user}:{database.password}@{database.host}:{database.port}/{database.name}?charset=utf8"
+ASYNC_DATABASE_URL = f"mysql+aiomysql://{database.user}:{database.password}@{database.host}:{database.port}/{database.name}?charset=utf8mb4"
 #创建异步引擎
 async_engine=create_async_engine(
     ASYNC_DATABASE_URL,

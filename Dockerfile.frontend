@@ -23,6 +23,12 @@ RUN npm ci
 
 COPY 03-前端项目代码/xwzx-news/ ./
 
+# 部署时 API 走 nginx 同源反代（/api → backend-api:8000），避免跨域；可用 --build-arg 覆盖
+# 前端各请求路径已自带 /api 前缀（如 /api/news/list），baseURL 必须用根 '/'，
+# 否则 axios 会拼成 /api/api/... 导致后端 404。
+ARG VITE_API_BASE_URL=/
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
 RUN npm run build
 
 # ---------- 2. 运行阶段 ----------

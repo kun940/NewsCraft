@@ -102,6 +102,7 @@ class LLMSettings(BaseModel):
 class EmbeddingSettings(BaseModel):
     provider: str = "dashscope"
     model: str = "text-embedding-v3"
+    base_url: str = "http://localhost:11434"   # ollama 服务地址（宿主机直连；容器内由 EMBEDDING__BASE_URL 覆盖）
     dimensions: int = 1024
 
 
@@ -147,6 +148,8 @@ class Settings(BaseSettings):
         yaml_file=BASE_DIR / "config.yaml",
         env_file=PROJECT_ROOT / ".env",
         env_file_encoding="utf-8",
+        # 允许 DATABASE__HOST 这类环境变量覆盖嵌套配置（compose 注入用）
+        env_nested_delimiter="__",
         extra="ignore",
     )
 
