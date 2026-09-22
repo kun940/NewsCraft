@@ -5,9 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cache.cache_service import cache_get_json, KEY_NEWS_CATEGORIES, cache_set_json, KEY_NEWS_LIST, KEY_NEWS_DETAIL
 from crud.news import get_categories, get_news_total, get_news_list, get_news_detail
+from models.news_models import News
 from schemas.newsbase import CategoryResponse, NewsListResponse, NewsListData, NewsDetailResponse, CategoryData, \
     NewsDetailData
 from utils.get_db_session import get_db
+
+from sqlalchemy import update
 
 router = APIRouter(prefix="/api/news", tags=["news"])
 
@@ -52,6 +55,12 @@ async def get_list(categoryId:int,page:int=1,pageSize:int=10,db:AsyncSession=Dep
 @router.get("/detail",response_model=NewsDetailResponse)
 async def get_detail(id:int,db:AsyncSession=Depends(get_db)):
     key = KEY_NEWS_DETAIL.format(news_id=id)
+    # 无论缓存是否命中，先原子自增（数据库行锁内完成，并发不丢；新闻不存在 rowcount=0）
+    result = await db.execute(
+        update(News).where(News.id == id).values(views=News.views + 1)
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="新闻不存在")
 
     cached = await cache_get_json(key)
     if cached is not None:
@@ -61,7 +70,6 @@ async def get_detail(id:int,db:AsyncSession=Depends(get_db)):
     #数据库不存在该新闻
     if not news_detail_data:
         raise HTTPException(status_code=404,detail="新闻不存在")
-
     data_obj = NewsDetailData.model_validate(news_detail_data)
     await cache_set_json(key, data_obj.model_dump(mode="json"), NEWS_DETAIL_TTL)
 
