@@ -1,4 +1,5 @@
 from datetime import datetime,timedelta
+from typing import Annotated
 
 from fastapi import APIRouter, Depends,HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +13,7 @@ from utils.security import create_token
 router = APIRouter(prefix="/api/user", tags=["user"])
 
 @router.post("/register",response_model=UserInfoResponse)
-async def user_register(req:RegisterRequest,db:AsyncSession=Depends(get_db)):
+async def user_register(req:RegisterRequest,db:Annotated[AsyncSession,Depends(get_db)]):
     #把用户信息写进数据库
     registered_user=await register(db,username=req.username,password=req.password)
     #生成token
@@ -29,7 +30,7 @@ async def user_register(req:RegisterRequest,db:AsyncSession=Depends(get_db)):
     return user_info_response
 
 @router.post("/login",response_model=UserInfoResponse)
-async def user_login(req:LoginRequest,db:AsyncSession=Depends(get_db)):
+async def user_login(req:LoginRequest,db:Annotated[AsyncSession,Depends(get_db)]):
     #从数据库里校对用户信息
     login_user=await check_username(db,req.username,req.password)
     if not login_user:
