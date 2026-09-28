@@ -71,3 +71,4 @@ async def update_password(password:UserPassword,current_active_user=Depends(get_
     if await set_password(db,password,current_active_user):
         password_response=PasswordResponse()
         return password_response
+

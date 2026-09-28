@@ -1,7 +1,9 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException,Request
+from fastapi.exceptions import RequestValidationError
+from starlette.responses import JSONResponse
 
 from core.rag_core.rag_service import _get_bm25_retriever, _get_dense_retriever
 from core.rag_core.vector_store import get_user_store
@@ -10,6 +12,7 @@ from routers import news, users, favorite, history, ai_rag
 from fastapi.middleware.cors import CORSMiddleware
 
 from utils.cache import get_redis
+from utils.exception import _error_body
 from utils.get_arq_pool import get_arq_pool
 from utils.get_db_session import AsyncSessionLocal
 from sqlalchemy import text
@@ -38,6 +41,33 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    # 兼容 detail 的两种形态：
+    #  1) 字符串："用户名已存在"            → 自动包成 {code:400, message:"...", data:null}
+    #  2) 结构化 dict：{"code":40001,...}   → 业务层已自定义错误码，原样透传
+    if isinstance(exc.detail, dict) and "message" in exc.detail:
+        body = exc.detail
+    else:
+        body = _error_body(code=exc.status_code, message=str(exc.detail))
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=body
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exc(request: Request, exc: RequestValidationError):
+    msgs = [f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()]
+    return JSONResponse(status_code=422,
+        content={"code": 422, "message": "; ".join(msgs), "data": None})
+
+@app.exception_handler(Exception)
+async def unhandled_exc(request: Request, exc: Exception):
+    logger.exception("unhandled: %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500,
+        content={"code": 500, "message": "服务器内部错误", "data": None})
 
 #跨域资源共享中间件
 app.add_middleware(
