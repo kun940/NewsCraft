@@ -14,7 +14,7 @@ async def add_history(req:AddHistoryRequest,current_active_user=Depends(get_curr
     # 鉴权
     if not current_active_user:
         raise HTTPException(status_code=401, detail="无用户令牌或令牌已过期")
-    history=await history_add(db,req.news_id,current_active_user.id)
+
     history = await history_add(db, req.news_id, current_active_user.id)
     await notify_interest_sync(current_active_user.id, req.news_id, "read")  # ✅ 新增：浏览行为埋点
     history_add_response=AddHistoryResponse(data=history)

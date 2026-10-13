@@ -9,10 +9,12 @@ from crud.ai_crud import is_task_done, create_task_log, mark_task_success, mark_
 from models.news_models import News, Categories
 from utils.get_db_session import AsyncSessionLocal
 from arq.connections import RedisSettings as ArqRedisSettings
+from arq import cron
 
 from core.rag_core.interest import refresh_user_interest
 from core.rag_core.recommend import CACHE_KEY
 from utils.cache import get_redis
+from utils.view_counter import flush_views
 
 logging.basicConfig(level=logging.INFO)
 logger=logging.getLogger(__name__)
@@ -81,10 +83,18 @@ async def sync_user_interest(ctx, user_id: int, news_id: int, action: str) -> No
     await redis.delete(CACHE_KEY.format(user_id=user_id))
     logger.info("兴趣画像已刷新 user_id=%s（触发: news_id=%s action=%s）", user_id, news_id, action)
 
+async def _flush_views_cron(ctx) -> None:
+    """arq cron 包装：每分钟批量回写 views 增量到 MySQL（P0-1 修复配套）。"""
+    await flush_views()
+
+
 class WorkerSettings:
     """Arq Worker 配置：函数注册 + Redis 连接 + 并发。"""
 
     functions = [vectorize_news_batch, generate_summary_batch,sync_user_interest]
+    cron_jobs = [
+        cron(_flush_views_cron, minute="*"),   # 每分钟回写 views 增量（Redis → MySQL）
+    ]
     redis_settings = ArqRedisSettings.from_dsn(settings.tasks.arq_redis_url)
     redis_settings.conn_timeout = 5
     redis_settings.conn_retries = 10
