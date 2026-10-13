@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy import select, delete, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.favorite_models import Favorite
@@ -33,7 +34,11 @@ async def favorite_add(db:AsyncSession,news_id:int,current_active_user:User):
         news_id=news_id,
     )
     db.add(favorite)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()  # 注意：回滚后当前事务作废，需重开或由 get_db 统一处理
+        raise HTTPException(status_code=400, detail="已收藏该新闻")
     await db.refresh(favorite)
     return favorite
 
